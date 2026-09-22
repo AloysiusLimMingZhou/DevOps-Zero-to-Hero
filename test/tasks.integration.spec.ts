@@ -37,8 +37,8 @@ describe('TasksService integration', () => {
                             password: config.get<string>('DB_PASSWORD'),
                             database: config.get<string>('DB_NAME'),
                             entities: [Task],
-                            synchronize: true,
-                            dropSchema: true
+                            synchronize: false,
+                            dropSchema: false
                         }
                     },
                 }),
@@ -171,7 +171,7 @@ describe('TasksService integration', () => {
 
         await service.delete(createdTask.id);
 
-        expect(service.findOneById(createdTask.id)).rejects.toThrow(NotFoundException);
+        await expect(service.findOneById(createdTask.id)).rejects.toThrow(NotFoundException);
     })
 
     it('rejects deleting a missing task', async () => {

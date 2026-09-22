@@ -24,7 +24,7 @@ import { RequestLoggingMiddleware } from "./common/middleware/request-logging.mi
                 password: config.get<string>('DB_PASSWORD'), // DB Password
                 database: config.get<string>('DB_NAME'), // DB Name
                 autoLoadEntities: true, // Automatically add entities that are registered through TypeOrmModule.forFeature([])
-                synchronize: config.get<string>('NODE_ENV') !== 'production' // Tells TypeORM to automatically synchronise our DB schema with our entities.ts, but not on prod database since that requires migration.
+                synchronize: false // Tells TypeORM to automatically synchronise our DB schema with our entities.ts, but not on prod database since that requires migration.
             })
         }),
         TasksModule,
