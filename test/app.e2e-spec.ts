@@ -11,14 +11,14 @@ describe('AppController (e2e)', () => {
   let app: INestApplication;
   let taskRepository: Repository<Task>;
 
-  beforeAll(async () => {
+  beforeAll(async () => { // For e2e tests, we test actual HTTP routing path & database. So before all tests we first recreate an exact replica instance of AppModule class inside this NestJS dependency injection container
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication(); // Create Nest Application instance
 
-    app.useGlobalPipes(
+    app.useGlobalPipes(// Implement pipes similar as actual Nest Application
       new ValidationPipe({
         whitelist: true,
         forbidNonWhitelisted: true,
@@ -26,18 +26,18 @@ describe('AppController (e2e)', () => {
       })
     );
 
-    app.useGlobalFilters(new AllExceptionFilter());
+    app.useGlobalFilters(new AllExceptionFilter()); // Implement exception filter similar as actual Nest Application
 
-    await app.init();
+    await app.init(); // start the app
 
-    taskRepository = app.get<Repository<Task>>(getRepositoryToken(Task));
+    taskRepository = app.get<Repository<Task>>(getRepositoryToken(Task)); // create an instance of task repository
   });
 
-  beforeEach(async () => {
+  beforeEach(async () => { // clear repository data before each test
     await taskRepository.clear();
   })
 
-  afterAll(async () => {
+  afterAll(async () => { // close the app instance inside Nest DI container after all tests are done
     await app.close();
   });
 

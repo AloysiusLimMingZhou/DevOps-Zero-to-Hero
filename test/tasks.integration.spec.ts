@@ -13,49 +13,49 @@ describe('TasksService integration', () => {
     let repository: Repository<Task>;
 
     beforeAll(async () => {
-        moduleRef = await Test.createTestingModule({
+        moduleRef = await Test.createTestingModule({ // Call NestJS Dependency Injection to create a container that consists of ConfigModule, TypeOrmModule, TasksModule instances.
             imports: [
-                ConfigModule.forRoot({
+                ConfigModule.forRoot({ // Load env variables from .env files
                     isGlobal: true,
-                    envFilePath: ['.env.test', '.env']
+                    envFilePath: ['.env.test', '.env'] // Check if there's .env.test, then only check for .env
                 }),
 
-                TypeOrmModule.forRootAsync({
+                TypeOrmModule.forRootAsync({ // Calls NestJS to create a DI container that has ConfigService to call its instance to fetch database env vars from .env.* files
                     inject: [ConfigService],
                     useFactory: (config: ConfigService) => {
-                        const nodeEnv = config.getOrThrow<string>('NODE_ENV');
+                        const nodeEnv = config.getOrThrow<string>('NODE_ENV'); // check for node environments
 
                         if (nodeEnv !== 'test'){
-                            throw new Error('Integration tests require NODE_ENV=test')
+                            throw new Error('Integration tests require NODE_ENV=test') // Make sure the tests only run on testing dataset
                         }
 
-                        return {
+                        return { // dataset environment variables
                             type: 'postgres' as const,
                             host: config.get<string>('DB_HOST'),
                             port: Number(config.get<string>('DB_PORT')),
                             username: config.get<string>('DB_USERNAME'),
                             password: config.get<string>('DB_PASSWORD'),
                             database: config.get<string>('DB_NAME'),
-                            entities: [Task],
-                            synchronize: false,
-                            dropSchema: false
+                            entities: [Task], // Tasks Entity which map typescript runtime data to database schemas
+                            synchronize: false, // Do not let TypeORM sync schema from entity. Always treat migration as source of truth
+                            dropSchema: false // Do not delete database schema upon connection starts
                         }
                     },
                 }),
 
                 TasksModule,
             ],
-        }).compile();
+        }).compile(); // compile() here build the NestJS dependency injection container
 
-        service = moduleRef.get<TasksService>(TasksService);
-        repository = moduleRef.get<Repository<Task>>(getRepositoryToken(Task));
+        service = moduleRef.get<TasksService>(TasksService); // Retrieve an instance of TasksService from the managed NestJS testing dependency injection container to be called and use later
+        repository = moduleRef.get<Repository<Task>>(getRepositoryToken(Task)); // Reason we have getRepositoryToken is because Repository itself is vague after Typescript compile. Repository<User> & Repository<Tasks> will become Repository & Repository after typescript compiled, so we need a unique token (TypeORM already has unique tokens for different entity, @InjectRepository(Tasks) in tasks.service.ts just map the token to the entity) which assigned a unique token ID to Repository to represent Repository<Tasks> or Repository<Users>
     });
 
-    beforeEach(async () => {
+    beforeEach(async () => { // Before each tests, clear all data stored in repository
         await repository.clear();
     })
 
-    afterAll(async () => {
+    afterAll(async () => { // After every tests are done, close the NestJS container
         await moduleRef.close();
     })
 
