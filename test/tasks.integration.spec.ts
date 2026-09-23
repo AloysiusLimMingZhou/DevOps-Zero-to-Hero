@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { getRepositoryToken, TypeOrmModule } from "@nestjs/typeorm";
 import { TasksModule } from "../src/tasks/tasks.module.js";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { envSchema } from "../src/config/env.schema.js";
 
 describe('TasksService integration', () => {
     let moduleRef: TestingModule;
@@ -17,7 +18,8 @@ describe('TasksService integration', () => {
             imports: [
                 ConfigModule.forRoot({ // Load env variables from .env files
                     isGlobal: true,
-                    envFilePath: ['.env.test', '.env'] // Check if there's .env.test, then only check for .env
+                    envFilePath: ['.env.test', '.env'], // Check if there's .env.test, then only check for .env
+                    validationSchema: envSchema
                 }),
 
                 TypeOrmModule.forRootAsync({ // Calls NestJS to create a DI container that has ConfigService to call its instance to fetch database env vars from .env.* files
@@ -31,11 +33,11 @@ describe('TasksService integration', () => {
 
                         return { // dataset environment variables
                             type: 'postgres' as const,
-                            host: config.get<string>('DB_HOST'),
-                            port: Number(config.get<string>('DB_PORT')),
-                            username: config.get<string>('DB_USERNAME'),
-                            password: config.get<string>('DB_PASSWORD'),
-                            database: config.get<string>('DB_NAME'),
+                            host: config.getOrThrow<string>('DB_HOST'),
+                            port: config.getOrThrow<number>('DB_PORT'),
+                            username: config.getOrThrow<string>('DB_USERNAME'),
+                            password: config.getOrThrow<string>('DB_PASSWORD'),
+                            database: config.getOrThrow<string>('DB_NAME'),
                             entities: [Task], // Tasks Entity which map typescript runtime data to database schemas
                             synchronize: false, // Do not let TypeORM sync schema from entity. Always treat migration as source of truth
                             dropSchema: false // Do not delete database schema upon connection starts

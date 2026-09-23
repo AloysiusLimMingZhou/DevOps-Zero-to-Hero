@@ -1,38 +1,48 @@
-services:
-  postgres:
-    image: postgres:17-alpine
-    environment:
+# Docker Compose help orchestrate multiple docker images. Think of it as handling multiple container within a server. 
+# It handles things like which container requires environment vars, port numbers exposed, how container interacts with each other, in this case just how API container & SQL container call each other, and also data volumes
+# Docker Compose can only handle containers within 1 server, so if the server die everything dies. It cannot do self-healing, autoscaling & network mapping since that requires multi server communication. For thos k8s and docker swarms are useful
+services: # Define which services for docker to run. In this case there's 2 services, postgres & API so docker compose need create and run 2 containers
+  postgres: # Define configs for postgres container
+    image: postgres:17-alpine # Pull and use existing postgres application in Linux Alpine server
+    environment: # environment variables from .env
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
-    ports:
+    ports: # Host:Container, since our local Windows uses 5432 which clashes with docker default 5432 for postgres, we changed local to be 5433
       - "5433:5432"
-    volumes:
+    volumes: # Docker own path for storing db files & data: /var/lib/postgresql/data, so even if container died, data is still persistent and not wiped out
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
+    healthcheck: # Docker execute pg_isready... to check if postgresql is up and ready to accept connections
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+      interval: 5s # Docker run this command every 5 seconds
+      timeout: 5s # Docker wait for this command to respond up to 5 seconds
+      retries: 10 # Docker retry this commands 10 times if failed
 
   api:
-    build: 
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      NODE_ENV: development
+    build: # Pull our custom docker image instead of existing built-in ones like postgres
+      context: . # This dir
+      dockerfile: Dockerfile # Dockerfile, our Dockerfile
+    environment: # Env variables
+      NODE_ENV: production
       PORT: 3000
-      DB_HOST: postgres
+      DB_HOST: postgres # DB_HOST = service name from postgres, so later api container -> postgres container via port 5432
       DB_PORT: ${DB_PORT}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
-    ports:
+    ports: #
       - "3000:3000"
-    depends_on:
+    depends_on: # Don't start API container until postgres is healthy and running
       postgres:
         condition: service_healthy
-    command: ["sh", "-c", "npm run migration:run && npm run start:prod"]
+    command: ["sh", "-c", "npm run migration:run:prod && npm run start:prod"] # sh -c means run shell command, so only run start:prod if migration:run:prod is successful
   
-volumes:
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"] # CMD syntax, node -e means run js code directly, the rest just check health inside the same API local container and if fail exit with failure
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s # Wait for 10s after API container is up then run
+
+volumes: # declare the file path used for store database data in docker
   postgres_data:

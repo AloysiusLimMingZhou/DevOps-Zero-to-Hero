@@ -1,7 +1,28 @@
 # Ignore All these folders/files when building the container
 
+# Compiled Outputs
 node_modules
 dist
+build
+
+# Git
 .git
+.gitignore
+
+# Secrets
 .env
 .env.*
+!.env.example
+
+# Logs
+logs
+*.log
+
+# IDEs
+.vscode/*
+.idea
+
+README.md
+
+# Tsconfig build
+tsconfig.build.tsbuildinfo
